@@ -1824,6 +1824,32 @@ func TestRunInSubdir(t *testing.T) {
 	}
 }
 
+func TestRunInSymlinkedRoot(t *testing.T) {
+	as := require.New(t)
+
+	projectDir := test.TempExamples(t)
+	tempDir := t.TempDir()
+	symlinkToProject := filepath.Join(tempDir, "project")
+	err := os.Symlink(projectDir, symlinkToProject)
+	as.NoError(err)
+
+	// I'm having trouble reproducing https://github.com/numtide/treefmt/issues/508
+	// <<< test.ChangeWorkDir(t, projectDir)
+	test.ChangeWorkDir(t, symlinkToProject)
+
+	// allow missing formatter
+	t.Setenv("TREEFMT_ALLOW_MISSING_FORMATTER", "true")
+
+	treefmt(t, withNoError(t),
+		withStats(t, map[stats.Type]int{
+			stats.Traversed: 33,
+			stats.Matched:   23,
+			stats.Formatted: 23,
+			stats.Changed:   1,
+		}),
+	)
+}
+
 type options struct {
 	args []string
 	env  map[string]string
